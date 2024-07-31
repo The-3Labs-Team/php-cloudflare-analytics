@@ -2,17 +2,20 @@
 
 namespace The3LabsTeam\PhpCloudflareAnalytics;
 
-class CloudflareAnalytics {
-
+class CloudflareAnalytics
+{
     public string $api_token;
+
     public string $endpoint;
 
-    public function __construct() {
+    public function __construct()
+    {
         $this->api_token = env('CLOUDFLARE_API_TOKEN');
-        $this->endpoint = "https://api.cloudflare.com/client/v4/graphql";
+        $this->endpoint = 'https://api.cloudflare.com/client/v4/graphql';
     }
 
-    protected function graphQLQuery($query) {
+    protected function graphQLQuery($query)
+    {
         $ch = curl_init($this->endpoint);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
@@ -20,8 +23,8 @@ class CloudflareAnalytics {
             CURLOPT_POSTFIELDS => json_encode(['query' => $query]),
             CURLOPT_HTTPHEADER => [
                 'Content-Type: application/json',
-                'Authorization: Bearer ' . $this->api_token
-            ]
+                'Authorization: Bearer '.$this->api_token,
+            ],
         ]);
 
         $response = curl_exec($ch);
@@ -32,12 +35,11 @@ class CloudflareAnalytics {
 
     /**
      * Get the views between two dates - Returns an array with the date as key and the views as value
-     * @param $startDate
-     * @param $endDate
-     * @param $zoneTag
+     *
      * @return array
      */
-    public function getViewsBetweenDates($startDate, $endDate, $zoneTag) {
+    public function getViewsBetweenDates($startDate, $endDate, $zoneTag)
+    {
         $query = <<<GRAPHQL
             query {
               viewer {
@@ -71,18 +73,16 @@ class CloudflareAnalytics {
         //order by date
         ksort($parsedResponse);
 
-
         return $parsedResponse;
     }
 
     /**
      * Get the total views between two dates - Returns the total views
-     * @param $startDate
-     * @param $endDate
-     * @param $zoneTag
+     *
      * @return int|mixed
      */
-    public function getTotalViewsBetweenDates($startDate, $endDate, $zoneTag) {
+    public function getTotalViewsBetweenDates($startDate, $endDate, $zoneTag)
+    {
         $query = <<<GRAPHQL
             query {
               viewer {
