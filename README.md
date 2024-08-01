@@ -3,7 +3,20 @@ Add in your .env file the following variables:
 
 ```dotenv
 CLOUDFLARE_API_TOKEN='your_cloudflare_api_token'
+CLOUDFLARE_ZONE_TAG_ID='zoneTag'
 ```
+
+## Refactor
+
+// init
+$cf = new \The3LabsTeam\PhpCloudflareAnalytics\CloudflareAnalytics(
+    // optional, if you want to use the default values from the .env file
+    token: 'your_cloudflare_api_token', zoneTag: 'zoneTag'
+);
+
+// 1.
+$cf->getPageViews()->whereBetweenDates('2021-10-01', '2021-10-31')->get();
+
 
 ## Usage
 
