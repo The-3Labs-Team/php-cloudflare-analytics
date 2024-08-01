@@ -19,7 +19,7 @@ next you can use the following methods:
 
 ->getLast24Hours($param, $paramType)
 
-->geLast7Days($param, $paramType)
+->getLast7Days($param, $paramType)
 
 ->getLastMonth($param, $paramType)
 ```
@@ -29,7 +29,7 @@ and you can pass the following parameters to get the data:
 - PARAM => `sum` or `uniq`
 - PARAM TYPE
     - SUM: `request`, `pageViews`, `cachedBytes`, `cachedRequests`, `threats`
-    - UNIQ: 'uniques'
+    - UNIQ: `uniques`
 
 ### Example
 
