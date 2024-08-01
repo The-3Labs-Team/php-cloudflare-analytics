@@ -2,21 +2,25 @@
 
 namespace The3LabsTeam\PhpCloudflareAnalytics;
 
-class CloudflareAnalytics {
-
+class CloudflareAnalytics
+{
     public string $api_token;
+
     public string $zoneTag;
+
     public string $endpoint;
 
-    public function __construct(string $zoneTag) {
+    public function __construct(string $zoneTag)
+    {
         $this->api_token = env('CLOUDFLARE_API_TOKEN');
         $this->zoneTag = $zoneTag;
-        $this->endpoint = "https://api.cloudflare.com/client/v4/graphql";
+        $this->endpoint = 'https://api.cloudflare.com/client/v4/graphql';
     }
 
     // ================== UTILITY ================== //
 
-    protected function graphQLQuery($query) {
+    protected function graphQLQuery($query)
+    {
         $ch = curl_init($this->endpoint);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
@@ -24,8 +28,8 @@ class CloudflareAnalytics {
             CURLOPT_POSTFIELDS => json_encode(['query' => $query]),
             CURLOPT_HTTPHEADER => [
                 'Content-Type: application/json',
-                'Authorization: Bearer ' . $this->api_token
-            ]
+                'Authorization: Bearer '.$this->api_token,
+            ],
         ]);
 
         $response = curl_exec($ch);
@@ -57,13 +61,13 @@ class CloudflareAnalytics {
     //TODO: Merge all the functions in one function with parameters
     /**
      * Get the total views between two dates - Returns the total views
-     * @param $startDate
-     * @param $endDate
-     * @param $param - 'sum' | 'uniq'
-     * @param $paramType - sum : 'request', 'pageViews', 'cachedBytes', 'cachedRequests', 'threats' | uniq: 'uniques'
+     *
+     * @param  $param  - 'sum' | 'uniq'
+     * @param  $paramType  - sum : 'request', 'pageViews', 'cachedBytes', 'cachedRequests', 'threats' | uniq: 'uniques'
      * @return int|mixed
      */
-    public function getBetweenDates($startDate, $endDate, $param = 'sum', $paramType = 'pageViews') {
+    public function getBetweenDates($startDate, $endDate, $param = 'sum', $paramType = 'pageViews')
+    {
         $query = <<<GRAPHQL
             query {
               viewer {
@@ -92,12 +96,13 @@ class CloudflareAnalytics {
         GRAPHQL;
 
         $response = $this->graphQLQuery($query);
+
         return $this->sumTotal($response, 'httpRequests1dGroups', $param, $paramType);
     }
 
     /**
      * Get the total views between two dates - Return the total views
-     * @param $sub
+     *
      * @return array
      */
     public function getBetweenHours($sub, $param, $paramType)
@@ -145,6 +150,7 @@ class CloudflareAnalytics {
 
     /**
      * Get the total views last 6 hours - Returns the total views
+     *
      * @return int|mixed
      */
     public function getLast6Hours($param, $paramType)
@@ -154,15 +160,17 @@ class CloudflareAnalytics {
 
     /**
      * Get the total views last 24 hours - Returns the total views
+     *
      * @return int|mixed
      */
     public function getLast24Hours($param, $paramType)
     {
-        return $this->getBetweenHours(sub: '-24 hours', param: $param, paramType:  $paramType);
+        return $this->getBetweenHours(sub: '-24 hours', param: $param, paramType: $paramType);
     }
 
     /**
      * Get the total views last 7 days - Returns the total views
+     *
      * @return int|mixed
      */
     public function getLast7Days($param, $paramType)
@@ -176,6 +184,7 @@ class CloudflareAnalytics {
 
     /**
      * Get the total views last month - Returns the total views
+     *
      * @return int|mixed
      */
     public function getLastMonth($param, $paramType)
