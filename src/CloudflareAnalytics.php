@@ -12,13 +12,13 @@ class CloudflareAnalytics
 
     protected string $endpoint;
 
-    protected string $startDate;
+    protected array $selectors = [];
 
-    protected string $endDate;
+    protected array $filters = [];
 
-    protected ?int $limit;
+    protected array $orderBys = [];
 
-    protected ?string $orderBy;
+    protected $takes = [];
 
     /**
      * CloudflareAnalytics constructor.
@@ -31,11 +31,16 @@ class CloudflareAnalytics
         $this->apiToken = $apiToken ?? $_ENV['CLOUDFLARE_API_TOKEN'];
         $this->zoneTag = $zoneTag ?? $_ENV['CLOUDFLARE_ZONE_TAG_ID'];
         $this->endpoint = 'https://api.cloudflare.com/client/v4/graphql';
+    }
 
-        $this->startDate = (new \DateTime('-1 day'))->format('c');
-        $this->endDate = (new \DateTime)->format('c');
-        $this->limit = 1000;
-        $this->orderBy = 'datetime_DESC';
+    public function select(...$selectors)
+    {
+        foreach ($selectors as $selector) {
+            [$key, $alias] = explode(' AS ', $selector);
+            $this->selectors[$alias] = $key;
+        }
+
+        return $this;
     }
 
     /**
@@ -69,10 +74,12 @@ class CloudflareAnalytics
     /**
      * Get the total views between two dates - Returns the total views
      */
-    public function whereBetween(string $startDate, string $endDate)
+    public function whereBetween(string $context, string $startDate, string $endDate)
     {
-        $this->startDate = $startDate;
-        $this->endDate = $endDate;
+        $this->filters[$context] = [
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+        ];
 
         return $this;
     }
@@ -80,9 +87,9 @@ class CloudflareAnalytics
     /**
      * Set the order by field and direction
      */
-    public function orderBy(string $field, string $direction = 'ASC')
+    public function orderBy(string $context, string $field, string $direction = 'ASC')
     {
-        $this->orderBy = $field.'_'.$direction;
+        $this->orderBys[$context][] = $field.'_'.$direction;
 
         return $this;
     }
@@ -90,9 +97,9 @@ class CloudflareAnalytics
     /**
      * Get a specific number of results
      */
-    public function take(int $limit)
+    public function take($alias, $limit)
     {
-        $this->limit = $limit;
+        $this->takes[$alias] = $limit;
 
         return $this;
     }
@@ -100,111 +107,66 @@ class CloudflareAnalytics
     /**
      * Get data
      */
-    public function get()
+    public function get(...$fields)
     {
+      $queries = [];
+      foreach ($this->selectors as $alias => $selector) {
+          $filter = $this->filters[$alias] ?? [];
+          $orderBy = $this->orderBys[$alias] ?? [];
+          $limit = isset($this->takes[$alias]) ? $this->takes[$alias] : 10;
 
-        $query = <<<GRAPHQL
-            query {
-              viewer {
-                zones(filter: {zoneTag: "$this->zoneTag"}) {
-                  last10Events: firewallEventsAdaptive(
-                    filter: {
-                      datetime_gt: "$this->startDate"
-                      datetime_lt: "$this->endDate"
-                    }
-                    limit: 10
-                    orderBy: [
-                      datetime_DESC
-                    ]
-                  ) {
-                    action
-                    datetime
-                    host: clientRequestHTTPHost
+          $fieldsList = implode("\n", array_map(fn ($f) => str_replace("$alias.", "", $f), $fields));
+
+          $queries[] = <<<GRAPHQL
+              $alias: $selector(
+                  filter: {
+                      datetime_gt: "{$filter['startDate']}"
+                      datetime_lt: "{$filter['endDate']}"
                   }
-                  top3DeviceTypes: httpRequestsAdaptiveGroups(
-                    filter: {
-                      datetime_gt: "$this->startDate"
-                      datetime_lt: "$this->endDate"
-                    }
-                    limit: 10
-                    orderBy: [
-                      count_DESC
-                    ]
-                  ) {
-                    count
-                    dimensions {
-                      device: clientDeviceType
-                    }
-                  }
-                }
+                  limit: $limit
+                  orderBy: [
+                      {$this->formatOrderBy($orderBy)}
+                  ]
+              ) {
+                  $fieldsList
+              }
+          GRAPHQL;
+      }
+
+      $query = <<<GRAPHQL
+          query {
+            viewer {
+              zones(filter: {zoneTag: "$this->zoneTag"}) {
+                {$this->formatQueries($queries)}
               }
             }
-        GRAPHQL;
+          }
+      GRAPHQL;
 
         $response = $this->query($query);
-
-        dd($response);
 
         return $response;
-
-        // return $this->sumTotal($response, 'httpRequests1dGroups', $param, $paramType);
     }
 
-    // protected function sumTotal($response, $zonesType, $param, $paramType)
-    // {
-    //     $response = $response['data']['viewer']['zones'][0][$zonesType];
-
-    //     $total = 0;
-    //     foreach ($response as $key => $value) {
-    //         $total += $value[$param][$paramType];
-    //     }
-
-    //     return $total;
-    // }
-
-    /**
-     * Get the total views between two dates - Return the total views
-     *
-     * @return array
-     */
-    public function getBetweenHours($sub, $param, $paramType)
+    private function formatOrderBy(array $orderBy)
     {
-        // Current date/time in ISO 8601 format
-        $endDate = date('c');
-        $startDate = date('c', strtotime($sub));
+        return implode("\n", array_map(fn ($o) => $o, $orderBy));
+    }
 
-        $query = <<<GRAPHQL
-           query {
-              viewer {
-                zones(filter: {zoneTag: "$this->zoneTag"}) {
-                  httpRequests1hGroups(
-                    limit: 1000
-                    filter: {
-                      datetime_geq: "$startDate"
-                      datetime_lt: "$endDate"
-                    }
-                  ) {
-                    dimensions {
-                      datetime
-                    }
-                    sum {
-                      requests
-                      pageViews
-                      cachedBytes
-                      cachedRequests
-                      threats
-                    }
-                    uniq {
-                      uniques
-                    }
-                  }
-                }
-              }
+    private function formatQueries(array $queries)
+    {
+        return implode("\n", array_map(fn ($q) => $q, $queries));
+    }
+
+    private function formatTakes()
+    {
+        $takes = [];
+        foreach ($this->takes as $alias => $limit) {
+            if (is_int($limit)) {
+                $takes[] = "{$alias}: {$limit}";
             }
-        GRAPHQL;
+        }
 
-        $response = $this->query($query);
-
-        // return $this->sumTotal($response, 'httpRequests1hGroups', $param, $paramType);
+        return implode(', ', $takes);
     }
 }

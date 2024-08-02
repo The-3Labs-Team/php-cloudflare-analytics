@@ -6,12 +6,20 @@ beforeEach(function () {
     $this->cf = new CloudflareAnalytics;
 });
 
-it('can get total views', function () {
-    $cf = new CloudflareAnalytics;
-    $result = $cf->get();
+it('can get firewall data', function () {
+    $startDate = (new DateTime)->sub(new DateInterval('P1D'))->format('c');
+    $endDate = (new DateTime)->format('c');
 
-    $this->assertIsArray($result);
-    $this->assertGreaterThan(0, $result);
+    $cf = new CloudflareAnalytics;
+
+    $results = $cf->select('firewallEventsAdaptive AS firewall')
+        ->whereBetween('firewall', $startDate, $endDate)
+        ->orderBy('firewall.datetime', 'DESC')
+        ->take('firewall', 2)
+        ->get('firewall.datetime', 'firewall.action');
+
+    $this->assertIsArray($results);
+    $this->assertGreaterThan(0, $results);
 });
 
 // it('can get total views between two dates', function () {
