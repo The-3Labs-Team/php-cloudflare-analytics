@@ -8,34 +8,90 @@ CLOUDFLARE_ZONE_TAG_ID='zoneTag'
 
 ## Refactor
 
-// init
-$cf = new \The3LabsTeam\PhpCloudflareAnalytics\CloudflareAnalytics(
-    // optional, if you want to use the default values from the .env file
+Usabe fields: firewallEventsAdaptive, 
+
+```php
+
+use The3LabsTeam\PhpCloudflareAnalytics\CloudflareAnalytics;
+
+$cf = new CloudflareAnalytics(
     token: 'your_cloudflare_api_token', zoneTag: 'zoneTag'
 );
 
-// 1.
-$cf->getPageViews()->whereBetweenDates('2021-10-01', '2021-10-31')->get();
+$cf = new CloudflareAnalytics();
+
+// Get results
+// $cf->get();
+
+// // Filter by date
+// $cf->whereBetween('2021-01-01', '2021-01-31')->get();
+
+// // Limit the results
+// $cf->take(10)->get();
+
+// // Order the results
+// $cf->orderBy('datetiime', 'DESC')->get();
+
+
+-- multiple filters --
+
+$cf->select('firewallEventsAdaptive AS last10Events', 'httpRequestsAdaptiveGroups AS top3DeviceTypes')
+    ->whereBetween('last10Events.2021-01-01', 'last10Events.2021-01-31')
+    ->whereBetween('top3DeviceTypes.2021-01-01', 'top3DeviceTypes.2021-01-31')
+    ->orderBy('last10Events.datetime', 'DESC')
+    ->orderBy('top3DeviceTypes.count', 'DESC')
+    ->get();
+
+```
+
+
+DEMO MULTIPLE FILTERS
+
+```graphql
+
+{
+  viewer {
+    zones(filter: { zoneTag: $tag }) {
+      last10Events: firewallEventsAdaptive(
+        filter: {
+          datetime_gt: $start
+          datetime_lt: $end
+        }
+        limit: 10
+        orderBy: [
+          datetime_DESC
+        ]
+      ) {
+        action
+        datetime
+        host: clientRequestHTTPHost
+      }
+      top3DeviceTypes: httpRequestsAdaptiveGroups(
+        filter: {
+          date: $ts
+        }
+        limit: 10
+        orderBy: [
+          count_DESC
+        ]
+      ) {
+        count
+        dimensions {
+          device: clientDeviceType
+        }
+      }
+    }
+  }
+}
+
+```
 
 
 ## Usage
 
-Default use:
 
-```php
-(new \The3LabsTeam\PhpCloudflareAnalytics\CloudflareAnalytics('zoneTag'))
-```
-next you can use the following methods:
 
-```php
-->getLast6Hours($param, $paramType)
 
-->getLast24Hours($param, $paramType)
-
-->getLast7Days($param, $paramType)
-
-->getLastMonth($param, $paramType)
-```
 
 and you can pass the following parameters to get the data:
 
@@ -43,28 +99,3 @@ and you can pass the following parameters to get the data:
 - PARAM TYPE
     - SUM: `request`, `pageViews`, `cachedBytes`, `cachedRequests`, `threats`
     - UNIQ: `uniques`
-
-### Example
-
-Get the total number of requests in the last 6 hours:
-
-```php
-$cloudflare = new \The3LabsTeam\PhpCloudflareAnalytics\CloudflareAnalytics('29djm3nr...');
-$cloudflare->getLast6Hours('sum', 'request');
-```
-
-Get the total number of unique visitors in the last 24 hours:
-
-```php
-$cloudflare = new \The3LabsTeam\PhpCloudflareAnalytics\CloudflareAnalytics('29djm3nr...');
-$cloudflare->getLast24Hours('uniq', 'uniques');
-```
-
-Get the total number of page views in the last 7 days:
-
-```php
-$cloudflare = new \The3LabsTeam\PhpCloudflareAnalytics\CloudflareAnalytics('29djm3nr...');
-$cloudflare->geLast7Days('sum', 'pageViews');
-```
-
-
