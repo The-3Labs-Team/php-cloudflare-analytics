@@ -109,15 +109,15 @@ class CloudflareAnalytics
      */
     public function get(...$fields)
     {
-      $queries = [];
-      foreach ($this->selectors as $alias => $selector) {
-          $filter = $this->filters[$alias] ?? [];
-          $orderBy = $this->orderBys[$alias] ?? [];
-          $limit = isset($this->takes[$alias]) ? $this->takes[$alias] : 10;
+        $queries = [];
+        foreach ($this->selectors as $alias => $selector) {
+            $filter = $this->filters[$alias] ?? [];
+            $orderBy = $this->orderBys[$alias] ?? [];
+            $limit = isset($this->takes[$alias]) ? $this->takes[$alias] : 10;
 
-          $fieldsList = implode("\n", array_map(fn ($f) => str_replace("$alias.", "", $f), $fields));
+            $fieldsList = implode("\n", array_map(fn ($f) => str_replace("$alias.", '', $f), $fields));
 
-          $queries[] = <<<GRAPHQL
+            $queries[] = <<<GRAPHQL
               $alias: $selector(
                   filter: {
                       datetime_gt: "{$filter['startDate']}"
@@ -131,9 +131,9 @@ class CloudflareAnalytics
                   $fieldsList
               }
           GRAPHQL;
-      }
+        }
 
-      $query = <<<GRAPHQL
+        $query = <<<GRAPHQL
           query {
             viewer {
               zones(filter: {zoneTag: "$this->zoneTag"}) {
