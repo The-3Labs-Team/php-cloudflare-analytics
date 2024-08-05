@@ -58,45 +58,60 @@ The `get` method will return an array with the results.
 
 ## Default fields
 
-- `datetime`: 1 day
+- `datetime`: 1 hour
 - `take`: 10
 - `orderBy`: `datetime`
 
 ## Demo
 
-Get last http visits:
+Get latest 10 firewall events:
 
 ```php
-$results = $cf->select('httpRequestsAdaptiveGroups AS http')
-    ->get('http.datetime', 'http.requests');
+$results = $cf->select('firewallEventsAdaptive AS firewall')
+    ->get('firewall.datetime', 'firewall.action');
 ```
 
-Get last http visits between two dates:
+Filter between two dates:
 
 ```php
-$startDate = (new DateTime)->sub(new DateInterval('P1D'))->format('c');
-$endDate = (new DateTime)->format('c');
-
-$results = $cf->select('httpRequestsAdaptiveGroups AS http')
-    ->whereBetween('http', $startDate, $endDate)
-    ->get('http.datetime', 'http.requests');
+$results = $cf->select('firewallEventsAdaptive AS firewall')
+    ->where('firewall.datetime', '>=', '2021-10-01T00:00:00Z')
+    ->where('firewall.datetime', '<=', '2021-10-02T00:00:00Z')
+    ->get('firewall.datetime', 'firewall.action');
 ```
 
-Get last http visits, limit the results to 2:
+Limit the results:
 
 ```php
-$results = $cf->select('httpRequestsAdaptiveGroups AS http')
-    ->take('http', 2)
-    ->get('http.datetime', 'http.requests');
+$results = $cf->select('firewallEventsAdaptive AS firewall')
+    ->take('firewall', 5)
+    ->get('firewall.datetime', 'firewall.action');
 ```
 
-Get last http visits, order by datetime:
+Order the results:
 
 ```php
-$results = $cf->select('httpRequestsAdaptiveGroups AS http')
-    ->orderBy('http', 'datetime')
-    ->get('http.datetime', 'http.requests');
+$results = $cf->select('firewallEventsAdaptive AS firewall')
+    ->orderBy('firewall.datetime', 'desc')
+    ->get('firewall.datetime', 'firewall.action');
 ```
+
+Get two fields from two different tables: // TODO: test this
+
+```php
+
+$results = $cf->select('firewallEventsAdaptive AS firewall, threatsAdaptiveGroups AS threats')
+    ->get('firewall.datetime', 'firewall.action', 'threats.datetime', 'threats.action');
+```
+
+Get http visits and sum them:
+
+```php
+    $results = $cf->select('httpRequests1mGroups AS http')
+        ->take('http', 10)
+        ->get('sum.countryMap.clientCountryName', 'sum.countryMap.requests', 'sum.countryMap.bytes', 'sum.countryMap.threats', 'dimensions.datetimeHour');
+```
+
 
 ## Testing
 

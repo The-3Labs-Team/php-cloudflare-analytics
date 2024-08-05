@@ -20,7 +20,7 @@ class CloudflareAnalytics
 
     protected array $orderBys = [];
 
-    protected $takes = [];
+    private $takes = [];
 
     /**
      * CloudflareAnalytics constructor.
@@ -114,19 +114,22 @@ class CloudflareAnalytics
         $queries = [];
         foreach ($this->selectors as $alias => $selector) {
             $filter = $this->filters[$alias] ?? [];
-            $orderBy = $this->orderBys[$alias] ?? ['datetime_DESC'];
+            $orderBy = array_filter($this->orderBys[$alias] ?? [], function ($order) {
+                return strpos($order, 'datetime') === false;
+            });
             $limit = isset($this->takes[$alias]) ? $this->takes[$alias] : 10;
 
-            $startDate = $filter['startDate'] ?? (new DateTime)->sub(new DateInterval('P1D'))->format('c');
+            $startDate = $filter['startDate'] ?? (new DateTime)->sub(new DateInterval('PT1H'))->format('c');
             $endDate = $filter['endDate'] ?? (new DateTime)->format('c');
 
-            $fieldsList = implode("\n", array_map(fn ($f) => str_replace("$alias.", '', $f), $fields));
+            // Formatta i campi nidificati
+            $fieldsList = $this->formatFields($fields, $alias);
 
             $queries[] = <<<GRAPHQL
               $alias: $selector(
                   filter: {
-                      datetime_gt: "$startDate",
-                      datetime_lt: "$endDate"
+                    datetime_gt: "$startDate",
+                    datetime_lt: "$endDate"
                   }
                   limit: $limit
                   orderBy: [
@@ -151,6 +154,39 @@ class CloudflareAnalytics
         $response = $this->query($query);
 
         return $response;
+    }
+
+    private function formatFields(array $fields, $alias)
+    {
+        $formattedFields = [];
+        foreach ($fields as $field) {
+            $field = str_replace("$alias.", '', $field); // Rimuove il prefisso alias
+            $parts = explode('.', $field);
+            $current = &$formattedFields;
+            foreach ($parts as $part) {
+                if (! isset($current[$part])) {
+                    $current[$part] = [];
+                }
+                $current = &$current[$part];
+            }
+        }
+
+        return $this->buildFieldString($formattedFields);
+    }
+
+    private function buildFieldString(array $fields, $indent = 2)
+    {
+        $result = '';
+        foreach ($fields as $key => $value) {
+            $result .= str_repeat(' ', $indent).$key;
+            if (is_array($value) && ! empty($value)) {
+                $result .= " {\n".$this->buildFieldString($value, $indent + 2).str_repeat(' ', $indent)."}\n";
+            } else {
+                $result .= "\n";
+            }
+        }
+
+        return $result;
     }
 
     private function formatOrderBy(array $orderBy)
