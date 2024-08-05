@@ -115,7 +115,7 @@ class CloudflareAnalytics
             $orderBy = $this->orderBys[$alias] ?? [];
             $limit = isset($this->takes[$alias]) ? $this->takes[$alias] : 10;
 
-            $fieldsList = implode("\n", array_map(fn ($f) => str_replace("$alias.", '', $f), $fields));
+            $fieldsList = implode("\n", array_map(fn ($f) => str_replace("$alias.", "", $f), $fields));
 
             $queries[] = <<<GRAPHQL
               $alias: $selector(

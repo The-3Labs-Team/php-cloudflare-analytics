@@ -22,6 +22,18 @@ it('can get firewall data', function () {
     $this->assertGreaterThan(0, $results);
 });
 
+it('can get total views', function () {
+    $cf = new CloudflareAnalytics;
+
+    $results = $cf->select('httpRequests1mGroups AS http')
+        ->get('http.sum.requests');
+
+        dd($results);
+
+    $this->assertIsArray($results);
+    $this->assertGreaterThan(0, $results);
+});
+
 // it('can get total views between two dates', function () {
 //     $startDate = date('Y-m-d', strtotime('-2 months'));
 //     $endDate = date('Y-m-d');
