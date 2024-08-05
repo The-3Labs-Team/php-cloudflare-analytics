@@ -2,9 +2,9 @@
 
 namespace The3LabsTeam\PhpCloudflareAnalytics;
 
-use Dotenv\Dotenv;
-use DateTime;
 use DateInterval;
+use DateTime;
+use Dotenv\Dotenv;
 
 class CloudflareAnalytics
 {
@@ -102,6 +102,7 @@ class CloudflareAnalytics
     public function take($alias, $limit)
     {
         $this->takes[$alias] = $limit;
+
         return $this;
     }
 
@@ -159,16 +160,17 @@ class CloudflareAnalytics
     {
         $formattedFields = [];
         foreach ($fields as $field) {
-            $field = str_replace("$alias.", "", $field); // Rimuove il prefisso alias
+            $field = str_replace("$alias.", '', $field); // Rimuove il prefisso alias
             $parts = explode('.', $field);
             $current = &$formattedFields;
             foreach ($parts as $part) {
-                if (!isset($current[$part])) {
+                if (! isset($current[$part])) {
                     $current[$part] = [];
                 }
                 $current = &$current[$part];
             }
         }
+
         return $this->buildFieldString($formattedFields);
     }
 
@@ -176,16 +178,16 @@ class CloudflareAnalytics
     {
         $result = '';
         foreach ($fields as $key => $value) {
-            $result .= str_repeat(' ', $indent) . $key;
-            if (is_array($value) && !empty($value)) {
-                $result .= " {\n" . $this->buildFieldString($value, $indent + 2) . str_repeat(' ', $indent) . "}\n";
+            $result .= str_repeat(' ', $indent).$key;
+            if (is_array($value) && ! empty($value)) {
+                $result .= " {\n".$this->buildFieldString($value, $indent + 2).str_repeat(' ', $indent)."}\n";
             } else {
                 $result .= "\n";
             }
         }
+
         return $result;
     }
-
 
     private function formatOrderBy(array $orderBy)
     {

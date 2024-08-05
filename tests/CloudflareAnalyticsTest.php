@@ -28,7 +28,7 @@ it('can get total views sum by date between two dates', function () {
         ->take('http', 10)
         ->get('sum.countryMap.clientCountryName', 'sum.countryMap.requests', 'sum.countryMap.bytes', 'sum.countryMap.threats', 'dimensions.datetimeHour');
 
-        dd($results);
+    dd($results);
     $this->assertIsArray($results);
     $this->assertGreaterThan(0, $results);
 });
@@ -113,4 +113,3 @@ it('can get firewall data with a specific order and limit between two dates', fu
     $this->assertIsArray($results);
     $this->assertGreaterThan(0, $results);
 });
-
