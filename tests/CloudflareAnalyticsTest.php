@@ -28,7 +28,7 @@ it('can get total views', function () {
     $results = $cf->select('httpRequests1mGroups AS http')
         ->get('http.sum.requests');
 
-        dd($results);
+    dd($results);
 
     $this->assertIsArray($results);
     $this->assertGreaterThan(0, $results);
