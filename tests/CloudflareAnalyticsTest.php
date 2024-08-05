@@ -112,4 +112,3 @@ it('can get firewall data with a specific order and limit between two dates', fu
     $this->assertIsArray($results);
     $this->assertGreaterThan(0, $results);
 });
-
