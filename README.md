@@ -58,7 +58,7 @@ The `get` method will return an array with the results.
 
 ## Default fields
 
-- `datetime`: 1 day
+- `datetime`: 1 hour
 - `take`: 10
 - `orderBy`: `datetime`
 

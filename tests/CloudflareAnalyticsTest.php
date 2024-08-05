@@ -6,6 +6,33 @@ beforeEach(function () {
     $this->cf = new CloudflareAnalytics;
 });
 
+it('can get total views sum by date', function () {
+    $cf = new CloudflareAnalytics;
+
+    $results = $cf->select('httpRequests1mGroups AS http')
+        ->take('http', 10)
+        ->get('sum.countryMap.clientCountryName', 'sum.countryMap.requests', 'sum.countryMap.bytes', 'sum.countryMap.threats', 'dimensions.datetimeHour');
+
+    $this->assertIsArray($results);
+    $this->assertGreaterThan(0, $results);
+});
+
+it('can get total views sum by date between two dates', function () {
+    $startDate = (new DateTime)->sub(new DateInterval('P51M'))->format('c');
+    $endDate = (new DateTime)->format('c');
+
+    $cf = new CloudflareAnalytics;
+
+    $results = $cf->select('httpRequests1mGroups AS http')
+        ->whereBetween('http', $startDate, $endDate)
+        ->take('http', 10)
+        ->get('sum.countryMap.clientCountryName', 'sum.countryMap.requests', 'sum.countryMap.bytes', 'sum.countryMap.threats', 'dimensions.datetimeHour');
+
+        dd($results);
+    $this->assertIsArray($results);
+    $this->assertGreaterThan(0, $results);
+});
+
 it('can get firewall data', function () {
     $cf = new CloudflareAnalytics;
 
@@ -86,3 +113,4 @@ it('can get firewall data with a specific order and limit between two dates', fu
     $this->assertIsArray($results);
     $this->assertGreaterThan(0, $results);
 });
+
