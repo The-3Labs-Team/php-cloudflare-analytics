@@ -2,9 +2,9 @@
 
 namespace The3LabsTeam\PhpCloudflareAnalytics;
 
-use Dotenv\Dotenv;
-use DateTime;
 use DateInterval;
+use DateTime;
+use Dotenv\Dotenv;
 
 class CloudflareAnalytics
 {
