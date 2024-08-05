@@ -35,19 +35,12 @@ You can use the following methods to build your query:
 
 ```php
 use The3LabsTeam\PhpCloudflareAnalytics\CloudflareAnalytics;
-$startDate = (new DateTime)->sub(new DateInterval('P1D'))->format('c');
-$endDate = (new DateTime)->format('c');
 
 $cf = new CloudflareAnalytics;
 
 $results = $cf->select('firewallEventsAdaptive AS firewall')
-    ->whereBetween('firewall', $startDate, $endDate)
-    ->orderBy('firewall.datetime', 'DESC')
-    ->take('firewall', 2)
     ->get('firewall.datetime', 'firewall.action');
 ```
-
-In the example above, we are querying the `firewallEventsAdaptive` field, filtering by the last 24 hours, ordering by datetime in descending order, and limiting the results to 2.
 
 The `get` method will return an array with the results.
 
@@ -58,6 +51,48 @@ The `get` method will return an array with the results.
 - `httpRequestsAdaptiveGroups`
 - `threatsAdaptiveGroups`
 - `threatsByCountryAdaptiveGroups`
+
+## Default fields
+
+- `datetime`: 1 day
+- `take`: 10
+- `orderBy`: `datetime`
+
+## Demo
+
+Get last http visits:
+
+```php
+$results = $cf->select('httpRequestsAdaptiveGroups AS http')
+    ->get('http.datetime', 'http.requests');
+```
+
+Get last http visits between two dates:
+
+```php
+$startDate = (new DateTime)->sub(new DateInterval('P1D'))->format('c');
+$endDate = (new DateTime)->format('c');
+
+$results = $cf->select('httpRequestsAdaptiveGroups AS http')
+    ->whereBetween('http', $startDate, $endDate)
+    ->get('http.datetime', 'http.requests');
+```
+
+Get last http visits, limit the results to 2:
+
+```php
+$results = $cf->select('httpRequestsAdaptiveGroups AS http')
+    ->take('http', 2)
+    ->get('http.datetime', 'http.requests');
+```
+
+Get last http visits, order by datetime:
+
+```php
+$results = $cf->select('httpRequestsAdaptiveGroups AS http')
+    ->orderBy('http', 'datetime')
+    ->get('http.datetime', 'http.requests');
+```
 
 ## Testing
 

@@ -3,6 +3,8 @@
 namespace The3LabsTeam\PhpCloudflareAnalytics;
 
 use Dotenv\Dotenv;
+use DateTime;
+use DateInterval;
 
 class CloudflareAnalytics
 {
@@ -112,16 +114,19 @@ class CloudflareAnalytics
         $queries = [];
         foreach ($this->selectors as $alias => $selector) {
             $filter = $this->filters[$alias] ?? [];
-            $orderBy = $this->orderBys[$alias] ?? [];
+            $orderBy = $this->orderBys[$alias] ?? ['datetime_DESC'];
             $limit = isset($this->takes[$alias]) ? $this->takes[$alias] : 10;
+
+            $startDate = $filter['startDate'] ?? (new DateTime)->sub(new DateInterval('P1D'))->format('c');
+            $endDate = $filter['endDate'] ?? (new DateTime)->format('c');
 
             $fieldsList = implode("\n", array_map(fn ($f) => str_replace("$alias.", "", $f), $fields));
 
             $queries[] = <<<GRAPHQL
               $alias: $selector(
                   filter: {
-                      datetime_gt: "{$filter['startDate']}"
-                      datetime_lt: "{$filter['endDate']}"
+                      datetime_gt: "$startDate",
+                      datetime_lt: "$endDate"
                   }
                   limit: $limit
                   orderBy: [
