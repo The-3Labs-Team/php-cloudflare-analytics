@@ -1,57 +1,115 @@
+# Cloudflare Analytics GraphQL API PHP Client
+
+This package is a simple PHP client for the Cloudflare Analytics GraphQL API.
+
+> ⚠️ **Note:** This package is not official and is not affiliated with Cloudflare. It is a community-driven package.
+
+> 🚨 **Note 2:** This package is under development and is not ready for production.
+
+## Installation
+
+You can install the package via composer:
+
+```bash
+composer require the3labsteam/php-cloudflare-analytics
+```
+
+## Configuration
 
 Add in your .env file the following variables:
 
 ```dotenv
 CLOUDFLARE_API_TOKEN='your_cloudflare_api_token'
+CLOUDFLARE_ZONE_TAG_ID='zoneTag'
+```
+
+or you can pass the token and zoneTag as parameters in the constructor.
+
+```php
+use The3LabsTeam\PhpCloudflareAnalytics\CloudflareAnalytics;
+
+$cf = new CloudflareAnalytics(
+    token: 'your_cloudflare_api_token', zoneTag: 'zoneTag'
+);
 ```
 
 ## Usage
 
-Default use:
+You can use the following methods to build your query:
 
 ```php
-(new \The3LabsTeam\PhpCloudflareAnalytics\CloudflareAnalytics('zoneTag'))
+use The3LabsTeam\PhpCloudflareAnalytics\CloudflareAnalytics;
+
+$cf = new CloudflareAnalytics;
+
+$results = $cf->select('firewallEventsAdaptive AS firewall')
+    ->get('firewall.datetime', 'firewall.action');
 ```
-next you can use the following methods:
+
+The `get` method will return an array with the results.
+
+## Available fields
+
+- `firewallEventsAdaptive`
+- `httpRequests1mGroups`
+- `httpRequestsAdaptiveGroups`
+- `threatsAdaptiveGroups`
+- `threatsByCountryAdaptiveGroups`
+
+## Default fields
+
+- `datetime`: 1 day
+- `take`: 10
+- `orderBy`: `datetime`
+
+## Demo
+
+Get last http visits:
 
 ```php
-->getLast6Hours($param, $paramType)
-
-->getLast24Hours($param, $paramType)
-
-->getLast7Days($param, $paramType)
-
-->getLastMonth($param, $paramType)
+$results = $cf->select('httpRequestsAdaptiveGroups AS http')
+    ->get('http.datetime', 'http.requests');
 ```
 
-and you can pass the following parameters to get the data:
-
-- PARAM => `sum` or `uniq`
-- PARAM TYPE
-    - SUM: `request`, `pageViews`, `cachedBytes`, `cachedRequests`, `threats`
-    - UNIQ: `uniques`
-
-### Example
-
-Get the total number of requests in the last 6 hours:
+Get last http visits between two dates:
 
 ```php
-$cloudflare = new \The3LabsTeam\PhpCloudflareAnalytics\CloudflareAnalytics('29djm3nr...');
-$cloudflare->getLast6Hours('sum', 'request');
+$startDate = (new DateTime)->sub(new DateInterval('P1D'))->format('c');
+$endDate = (new DateTime)->format('c');
+
+$results = $cf->select('httpRequestsAdaptiveGroups AS http')
+    ->whereBetween('http', $startDate, $endDate)
+    ->get('http.datetime', 'http.requests');
 ```
 
-Get the total number of unique visitors in the last 24 hours:
+Get last http visits, limit the results to 2:
 
 ```php
-$cloudflare = new \The3LabsTeam\PhpCloudflareAnalytics\CloudflareAnalytics('29djm3nr...');
-$cloudflare->getLast24Hours('uniq', 'uniques');
+$results = $cf->select('httpRequestsAdaptiveGroups AS http')
+    ->take('http', 2)
+    ->get('http.datetime', 'http.requests');
 ```
 
-Get the total number of page views in the last 7 days:
+Get last http visits, order by datetime:
 
 ```php
-$cloudflare = new \The3LabsTeam\PhpCloudflareAnalytics\CloudflareAnalytics('29djm3nr...');
-$cloudflare->geLast7Days('sum', 'pageViews');
+$results = $cf->select('httpRequestsAdaptiveGroups AS http')
+    ->orderBy('http', 'datetime')
+    ->get('http.datetime', 'http.requests');
 ```
 
+## Testing
 
+```bash
+composer test
+```
+
+## License
+
+The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
+
+## Credits
+
+- [The3LabsTeam](https://3labs.it)
+
+// TODO: Add the rest of the file

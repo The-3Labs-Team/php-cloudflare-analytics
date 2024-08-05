@@ -2,24 +2,53 @@
 
 namespace The3LabsTeam\PhpCloudflareAnalytics;
 
+use DateInterval;
+use DateTime;
+use Dotenv\Dotenv;
+
 class CloudflareAnalytics
 {
-    public string $api_token;
+    private string $apiToken;
 
-    public string $zoneTag;
+    private string $zoneTag;
 
-    public string $endpoint;
+    protected string $endpoint;
 
-    public function __construct(string $zoneTag)
+    protected array $selectors = [];
+
+    protected array $filters = [];
+
+    protected array $orderBys = [];
+
+    protected $takes = [];
+
+    /**
+     * CloudflareAnalytics constructor.
+     */
+    public function __construct(?string $apiToken = null, ?string $zoneTag = null)
     {
-        $this->api_token = env('CLOUDFLARE_API_TOKEN');
-        $this->zoneTag = $zoneTag;
+        $dotenv = Dotenv::createImmutable(__DIR__.'/../');
+        $dotenv->load();
+
+        $this->apiToken = $apiToken ?? $_ENV['CLOUDFLARE_API_TOKEN'];
+        $this->zoneTag = $zoneTag ?? $_ENV['CLOUDFLARE_ZONE_TAG_ID'];
         $this->endpoint = 'https://api.cloudflare.com/client/v4/graphql';
     }
 
-    // ================== UTILITY ================== //
+    public function select(...$selectors)
+    {
+        foreach ($selectors as $selector) {
+            [$key, $alias] = explode(' AS ', $selector);
+            $this->selectors[$alias] = $key;
+        }
 
-    protected function graphQLQuery($query)
+        return $this;
+    }
+
+    /**
+     * Query the Cloudflare API
+     */
+    protected function query($query)
     {
         $ch = curl_init($this->endpoint);
         curl_setopt_array($ch, [
@@ -28,7 +57,7 @@ class CloudflareAnalytics
             CURLOPT_POSTFIELDS => json_encode(['query' => $query]),
             CURLOPT_HTTPHEADER => [
                 'Content-Type: application/json',
-                'Authorization: Bearer '.$this->api_token,
+                'Authorization: Bearer '.$this->apiToken,
             ],
         ]);
 
@@ -44,155 +73,105 @@ class CloudflareAnalytics
         return $response;
     }
 
-    protected function sumTotal($response, $zonesType, $param, $paramType)
-    {
-        $response = $response['data']['viewer']['zones'][0][$zonesType];
-
-        $total = 0;
-        foreach ($response as $key => $value) {
-            $total += $value[$param][$paramType];
-        }
-
-        return $total;
-    }
-
-    // ================== DEFAULT FUNCTIONS ================== //
-
-    //TODO: Merge all the functions in one function with parameters
     /**
      * Get the total views between two dates - Returns the total views
-     *
-     * @param  $param  - 'sum' | 'uniq'
-     * @param  $paramType  - sum : 'request', 'pageViews', 'cachedBytes', 'cachedRequests', 'threats' | uniq: 'uniques'
-     * @return int|mixed
      */
-    public function getBetweenDates($startDate, $endDate, $param = 'sum', $paramType = 'pageViews')
+    public function whereBetween(string $context, string $startDate, string $endDate)
     {
-        $query = <<<GRAPHQL
-            query {
-              viewer {
-                zones(filter: {zoneTag: "$this->zoneTag"}) {
-                  httpRequests1dGroups(
-                    limit: 1000
-                    filter: {
-                      date_geq: "$startDate"
-                      date_lt: "$endDate"
-                    }
-                  ) {
-                    sum {
-                      requests
-                      pageViews
-                      cachedBytes
-                      cachedRequests
-                      threats
-                    }
-                    uniq {
-                      uniques
-                    }
-                  }
-                }
-              }
-            }
-        GRAPHQL;
+        $this->filters[$context] = [
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+        ];
 
-        $response = $this->graphQLQuery($query);
-
-        return $this->sumTotal($response, 'httpRequests1dGroups', $param, $paramType);
+        return $this;
     }
 
     /**
-     * Get the total views between two dates - Return the total views
-     *
-     * @return array
+     * Set the order by field and direction
      */
-    public function getBetweenHours($sub, $param, $paramType)
+    public function orderBy(string $context, string $field, string $direction = 'ASC')
     {
-        // Current date/time in ISO 8601 format
-        $endDate = date('c');
-        $startDate = date('c', strtotime($sub));
+        $this->orderBys[$context][] = $field.'_'.$direction;
 
-        $query = <<<GRAPHQL
-           query {
-              viewer {
-                zones(filter: {zoneTag: "$this->zoneTag"}) {
-                  httpRequests1hGroups(
-                    limit: 1000
-                    filter: {
-                      datetime_geq: "$startDate"
+        return $this;
+    }
+
+    /**
+     * Get a specific number of results
+     */
+    public function take($alias, $limit)
+    {
+        $this->takes[$alias] = $limit;
+
+        return $this;
+    }
+
+    /**
+     * Get data
+     */
+    public function get(...$fields)
+    {
+        $queries = [];
+        foreach ($this->selectors as $alias => $selector) {
+            $filter = $this->filters[$alias] ?? [];
+            $orderBy = $this->orderBys[$alias] ?? ['datetime_DESC'];
+            $limit = isset($this->takes[$alias]) ? $this->takes[$alias] : 10;
+
+            $startDate = $filter['startDate'] ?? (new DateTime)->sub(new DateInterval('P1D'))->format('c');
+            $endDate = $filter['endDate'] ?? (new DateTime)->format('c');
+
+            $fieldsList = implode("\n", array_map(fn ($f) => str_replace("$alias.", '', $f), $fields));
+
+            $queries[] = <<<GRAPHQL
+              $alias: $selector(
+                  filter: {
+                      datetime_gt: "$startDate",
                       datetime_lt: "$endDate"
-                    }
-                  ) {
-                    dimensions {
-                      datetime
-                    }
-                    sum {
-                      requests
-                      pageViews
-                      cachedBytes
-                      cachedRequests
-                      threats
-                    }
-                    uniq {
-                      uniques
-                    }
                   }
-                }
+                  limit: $limit
+                  orderBy: [
+                      {$this->formatOrderBy($orderBy)}
+                  ]
+              ) {
+                  $fieldsList
+              }
+          GRAPHQL;
+        }
+
+        $query = <<<GRAPHQL
+          query {
+            viewer {
+              zones(filter: {zoneTag: "$this->zoneTag"}) {
+                {$this->formatQueries($queries)}
               }
             }
-        GRAPHQL;
+          }
+      GRAPHQL;
 
-        $response = $this->graphQLQuery($query);
+        $response = $this->query($query);
 
-        return $this->sumTotal($response, 'httpRequests1hGroups', $param, $paramType);
+        return $response;
     }
 
-    // ================== DEFAULT PRESET ================== //
-
-    /**
-     * Get the total views last 6 hours - Returns the total views
-     *
-     * @return int|mixed
-     */
-    public function getLast6Hours($param, $paramType)
+    private function formatOrderBy(array $orderBy)
     {
-        return $this->getBetweenHours(sub: '-6 hours', param: $param, paramType: $paramType);
+        return implode("\n", array_map(fn ($o) => $o, $orderBy));
     }
 
-    /**
-     * Get the total views last 24 hours - Returns the total views
-     *
-     * @return int|mixed
-     */
-    public function getLast24Hours($param, $paramType)
+    private function formatQueries(array $queries)
     {
-        return $this->getBetweenHours(sub: '-24 hours', param: $param, paramType: $paramType);
+        return implode("\n", array_map(fn ($q) => $q, $queries));
     }
 
-    /**
-     * Get the total views last 7 days - Returns the total views
-     *
-     * @return int|mixed
-     */
-    public function getLast7Days($param, $paramType)
+    private function formatTakes()
     {
-        // Current date/time in Y-m-d
-        $startDate = date('Y-m-d', strtotime('-7 days'));
-        $endDate = date('Y-m-d');
+        $takes = [];
+        foreach ($this->takes as $alias => $limit) {
+            if (is_int($limit)) {
+                $takes[] = "{$alias}: {$limit}";
+            }
+        }
 
-        return $this->getBetweenDates(startDate: $startDate, endDate: $endDate, param: $param, paramType: $paramType);
-    }
-
-    /**
-     * Get the total views last month - Returns the total views
-     *
-     * @return int|mixed
-     */
-    public function getLastMonth($param, $paramType)
-    {
-        // Current date/time in Y-m-d
-        $startDate = date('Y-m-d', strtotime('-1 month'));
-        $endDate = date('Y-m-d');
-
-        return $this->getBetweenDates(startDate: $startDate, endDate: $endDate, param: $param, paramType: $paramType);
+        return implode(', ', $takes);
     }
 }
