@@ -120,7 +120,7 @@ class CloudflareAnalytics
             $startDate = $filter['startDate'] ?? (new DateTime)->sub(new DateInterval('P1D'))->format('c');
             $endDate = $filter['endDate'] ?? (new DateTime)->format('c');
 
-            $fieldsList = implode("\n", array_map(fn ($f) => str_replace("$alias.", "", $f), $fields));
+            $fieldsList = implode("\n", array_map(fn ($f) => str_replace("$alias.", '', $f), $fields));
 
             $queries[] = <<<GRAPHQL
               $alias: $selector(
