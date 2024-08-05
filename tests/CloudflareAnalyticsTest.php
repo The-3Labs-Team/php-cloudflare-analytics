@@ -45,47 +45,44 @@ it('can get firewall data with a specific limit', function () {
     $this->assertGreaterThan(0, $results);
 });
 
-// it('can get total views', function () {
-//     $cf = new CloudflareAnalytics;
+it('can get firewall data with a specific order', function () {
+    $cf = new CloudflareAnalytics;
 
-//     $results = $cf->select('httpRequests1mGroups AS http')
-//         ->get('http.sum.requests');
+    $results = $cf->select('firewallEventsAdaptive AS firewall')
+        ->orderBy('firewall.datetime', 'DESC')
+        ->get('firewall.datetime', 'firewall.action');
 
-//         dd($results);
+    $this->assertIsArray($results);
+    $this->assertGreaterThan(0, $results);
+});
 
-//     $this->assertIsArray($results);
-//     $this->assertGreaterThan(0, $results);
-// });
+it('can get firewall data with a specific order and limit', function () {
+    $limit = 10;
 
-// it('can get total views between two dates', function () {
-//     $startDate = date('Y-m-d', strtotime('-2 months'));
-//     $endDate = date('Y-m-d');
+    $cf = new CloudflareAnalytics;
 
-//     $cf = new \The3LabsTeam\PhpCloudflareAnalytics\CloudflareAnalytics();
-//     $result = $cf->whereBetween($startDate, $endDate)->get();
+    $results = $cf->select('firewallEventsAdaptive AS firewall')
+        ->orderBy('firewall.datetime', 'DESC')
+        ->take('firewall', $limit)
+        ->get('firewall.datetime', 'firewall.action');
 
-//     $this->assertIsArray($result);
-//     $this->assertGreaterThan(0, $result);
+    $this->assertIsArray($results);
+    $this->assertGreaterThan(0, $results);
+});
 
-// });
+it('can get firewall data with a specific order and limit between two dates', function () {
+    $startDate = (new DateTime)->sub(new DateInterval('P1D'))->format('c');
+    $endDate = (new DateTime)->format('c');
+    $limit = 10;
 
-// it('can get total views with a specific limit', function () {
-//     $limit = 10;
+    $cf = new CloudflareAnalytics;
 
-//     $cf = new \The3LabsTeam\PhpCloudflareAnalytics\CloudflareAnalytics();
-//     $result = $cf->take($limit)->get();
+    $results = $cf->select('firewallEventsAdaptive AS firewall')
+        ->whereBetween('firewall', $startDate, $endDate)
+        ->orderBy('firewall.datetime', 'DESC')
+        ->take('firewall', $limit)
+        ->get('firewall.datetime', 'firewall.action');
 
-//     $this->assertIsArray($result);
-//     $this->assertGreaterThan(0, $result);
-// });
-
-// it('can get total views with custom parameters', function () {
-//     $param = 'cachedRequests';
-//     $paramType = 'cachedBytes';
-
-//     $cf = new \The3LabsTeam\PhpCloudflareAnalytics\CloudflareAnalytics();
-//     $result = $cf->get($param, $paramType);
-
-//     $this->assertIsArray($result);
-//     $this->assertGreaterThan(0, $result);
-// });
+    $this->assertIsArray($results);
+    $this->assertGreaterThan(0, $results);
+});
