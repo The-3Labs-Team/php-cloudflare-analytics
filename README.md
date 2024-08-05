@@ -11,7 +11,7 @@ This package is a simple PHP client for the Cloudflare Analytics GraphQL API.
 You can install the package via composer:
 
 ```bash
-composer require the3labsteam/php-cloudflare-analytics
+composer require the-3labs-team/php-cloudflare-analytics
 ```
 
 ## Configuration
