@@ -2,6 +2,10 @@
 
 This package is a simple PHP client for the Cloudflare Analytics GraphQL API.
 
+> ⚠️ **Note:** This package is not official and is not affiliated with Cloudflare. It is a community-driven package.
+
+> 🚨 **Note 2:** This package is under development and is not ready for production.
+
 ## Installation
 
 You can install the package via composer:
